@@ -331,3 +331,22 @@ alter publication supabase_realtime add table public.line_items;
 alter publication supabase_realtime add table public.receipts;
 alter publication supabase_realtime add table public.trip_units;
 alter publication supabase_realtime add table public.trip_members;
+
+-- ---------------------------------------------------------------------------
+-- Explicit API grants (newer Supabase projects may not grant table access to
+-- anon/authenticated by default). RLS policies above still decide which rows.
+-- ---------------------------------------------------------------------------
+
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to service_role;
+
+grant select on public.profiles to authenticated;
+grant select, insert, update, delete on public.saved_groups to authenticated;
+grant select on public.trips to anon, authenticated;
+grant delete on public.trips to authenticated;
+grant select on public.trip_units, public.trip_members, public.receipts, public.line_items to anon, authenticated;
+grant insert, update, delete on public.trip_units, public.trip_members, public.receipts, public.line_items to authenticated;
+grant select, insert, delete on public.item_assignments to anon, authenticated;
+
+grant execute on function public.request_join_token(), public.can_edit_trip(uuid), public.can_access_trip(uuid),
+  public.has_paid_plan(uuid), public.assignment_is_consistent(uuid, uuid, text, uuid) to anon, authenticated;

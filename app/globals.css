@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #f3f4f6;
+  color: #0f172a;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* numbers line up in the bill panel */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

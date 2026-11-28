@@ -23,7 +23,7 @@ export function Workspace({
   onViewPhoto,
 }: {
   store: TripStore;
-  role: "local" | "owner" | "guest";
+  role: "local" | "account" | "owner" | "guest";
   savedGroups?: SavedGroupOption[];
   onSaveGroup?: () => void;
   onScanLimit?: (code: string) => void;
@@ -88,7 +88,8 @@ export function Workspace({
               </Link>
               {role === "local" && <span className="rounded bg-slate-700 px-1.5 py-0.5">Demo mode · saved in this browser</span>}
               {role === "guest" && <span className="rounded bg-slate-700 px-1.5 py-0.5">Joined as guest</span>}
-              {role !== "local" &&
+              {role === "account" && <span className="rounded bg-slate-700 px-1.5 py-0.5">Saved to your account</span>}
+              {(role === "owner" || role === "guest") &&
                 (store.live ? (
                   <span className="flex items-center gap-1 text-emerald-400">
                     <Radio className="h-3 w-3" /> Live

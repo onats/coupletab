@@ -19,7 +19,20 @@ function NewTrip() {
     started.current = true;
     const sb = getBrowserSupabase();
     if (!sb) {
-      router.replace("/local");
+      // Local accounts mode: create the trip on this server for the signed-in account.
+      void (async () => {
+        const res = await fetch("/api/local-trips", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+        if (res.status === 401) {
+          router.replace("/signup?next=/new");
+          return;
+        }
+        if (!res.ok) {
+          setError(await readApiError(res));
+          return;
+        }
+        const { id } = (await res.json()) as { id: string };
+        router.replace(`/trip/${id}`);
+      })();
       return;
     }
     (async () => {

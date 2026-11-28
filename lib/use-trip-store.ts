@@ -208,3 +208,110 @@ export function useRemoteTripStore(slug: string, joinToken: string | null): Trip
 
   return { state, status, error, syncing, live, dispatch, addSavedReceipt, clearError: () => setError(null), supabase };
 }
+
+/**
+ * Local accounts mode: the trip lives on this server (JSON file) and belongs to the signed-in
+ * account. Edits apply instantly and the whole state is saved with a short debounce.
+ */
+export function useAccountTripStore(id: string): TripStore {
+  const [state, setState] = useState<TripState | null>(null);
+  const [status, setStatus] = useState<StoreStatus>("loading");
+  const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const current = useRef<TripState | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saving = useRef(false);
+  const dirty = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch(`/api/local-trips/${encodeURIComponent(id)}`, { cache: "no-store" });
+      if (cancelled) return;
+      if (res.status === 404 || res.status === 401) {
+        setStatus("not_found");
+        return;
+      }
+      if (!res.ok) {
+        setStatus("error");
+        setError(`Could not load this trip (HTTP ${res.status})`);
+        return;
+      }
+      const j = (await res.json()) as { state: TripState };
+      current.current = j.state;
+      setState(j.state);
+      setStatus("ready");
+    })().catch((e) => {
+      if (cancelled) return;
+      setStatus("error");
+      setError(e instanceof Error ? e.message : "Could not load this trip");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const save = useCallback(async () => {
+    timer.current = null;
+    if (!current.current) return;
+    if (saving.current) {
+      dirty.current = true;
+      return;
+    }
+    saving.current = true;
+    dirty.current = false;
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/local-trips/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ state: current.current }),
+      });
+      if (!res.ok) setError(`Couldn't save your last change (HTTP ${res.status}).`);
+    } catch {
+      setError("Couldn't save your last change. Check the server is still running.");
+    } finally {
+      saving.current = false;
+      setSyncing(false);
+      if (dirty.current) void save();
+    }
+  }, [id]);
+
+  const schedule = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(save, 400);
+  }, [save]);
+
+  // Don't lose the last edit if the tab closes mid-debounce.
+  useEffect(() => {
+    const flush = () => {
+      if (!timer.current || !current.current) return;
+      clearTimeout(timer.current);
+      timer.current = null;
+      void fetch(`/api/local-trips/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ state: current.current }),
+        keepalive: true,
+      });
+    };
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [id]);
+
+  const dispatch = useCallback(
+    (a: TripAction) => {
+      if (!current.current) return;
+      current.current = tripReducer(current.current, a);
+      setState(current.current);
+      schedule();
+    },
+    [schedule],
+  );
+  const addSavedReceipt = useCallback((receipt: Receipt, items: LineItem[]) => dispatch({ type: "receipt/add", receipt, items }), [dispatch]);
+
+  return { state, status, error, syncing, live: false, dispatch, addSavedReceipt, clearError: () => setError(null), supabase: null };
+}

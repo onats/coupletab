@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { LocalAuthForm } from "@/components/local/auth-form";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { useAccount } from "@/lib/use-account";
 
@@ -20,17 +21,7 @@ function Login() {
   const sb = getBrowserSupabase();
   const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` : undefined;
 
-  if (!sb) {
-    return (
-      <Card className="mx-auto mt-20 max-w-md p-6 text-center">
-        <h1 className="text-lg font-semibold">Accounts aren&apos;t set up yet</h1>
-        <p className="mt-2 text-sm text-slate-600">Add your Supabase keys to enable sign-in. Until then, demo mode keeps everything in this browser.</p>
-        <Link href="/local">
-          <Button className="mt-4">Open demo mode</Button>
-        </Link>
-      </Card>
-    );
-  }
+  if (!sb) return <LocalAuthForm mode="login" next={next} />;
 
   // Anonymous users keep their trips by linking an email/Google identity instead of creating a new account.
   const linking = !!user && isAnonymous;

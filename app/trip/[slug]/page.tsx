@@ -3,7 +3,9 @@ import { Check, Copy, Link2, Lock, Loader2, Share2, Sparkles } from "lucide-reac
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { LocalTrip } from "@/components/local/trip";
 import { UpgradeDialog } from "@/components/upgrade-dialog";
+import { getBrowserSupabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { SavedGroupOption } from "@/components/workspace/group-bar";
@@ -218,7 +220,12 @@ export default function TripPage() {
         </div>
       }
     >
-      <TripRoom />
+      {getBrowserSupabase() ? <TripRoom /> : <LocalTripRoute />}
     </Suspense>
   );
+}
+
+function LocalTripRoute() {
+  const { slug } = useParams<{ slug: string }>();
+  return <LocalTrip id={slug} />;
 }

@@ -2,7 +2,9 @@
 import { Archive, ArchiveRestore, Crown, Loader2, Plus, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { LocalDashboard } from "@/components/local/dashboard";
+import { getBrowserSupabase } from "@/lib/supabase/client";
 import { UpgradeDialog } from "@/components/upgrade-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge, Card } from "@/components/ui/card";
@@ -27,7 +29,7 @@ interface GroupRow {
 
 const TIER_LABEL = { free: "Free", trip_pass: "Trip Pass", pro: "Pro Host" } as const;
 
-export default function Dashboard() {
+function SupabaseDashboard() {
   const router = useRouter();
   const { sb, user, profile, isAnonymous, loading } = useAccount();
   const [trips, setTrips] = useState<TripRow[] | null>(null);
@@ -193,4 +195,15 @@ export default function Dashboard() {
       <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} returnTo="/dashboard" />
     </div>
   );
+}
+
+export default function Dashboard() {
+  if (!getBrowserSupabase()) {
+    return (
+      <Suspense>
+        <LocalDashboard />
+      </Suspense>
+    );
+  }
+  return <SupabaseDashboard />;
 }
